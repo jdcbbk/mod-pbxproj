@@ -33,3 +33,13 @@ class Parsing(unittest.TestCase):
             control = osp.OpenStepDecoder.ParseFromFile(open('samples/{0}.pbxproj'.format(file)))
             assert result.data == control
 
+
+
+class RemoveProject(unittest.TestCase):
+    def testRemoveProject(self):
+        project=XcodeProject.Load('/Users/tobinchen/Documents/Project/OpenSDK_1.4_Didi/OpenSDK/Demo/iOS/PstnCCDemo/PstnCCDemo.xcodeproj/project.pbxproj')
+        project.save()
+        project.backup(backup_name='/Users/tobinchen/Documents/Project/OpenSDK_1.4_Didi/OpenSDK/Demo/iOS/PstnCCDemo/PstnCCDemo.xcodeproj/project_bak.pbxproj')
+
+        project.remove_project_by_path('../../../platform_build/ios/VideoEngine.xcodeproj')
+        project.save()

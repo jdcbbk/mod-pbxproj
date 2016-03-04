@@ -358,12 +358,32 @@ class PBXGroup(PBXType):
 
 
 class PBXNativeTarget(PBXType):
-    pass
+    def remove_dependency(self, id):
+        if 'dependencies' not in self:
+            self['dependencies'] = PBXList()
+            return
+
+        if not PBXType.IsGuid(id):
+            id = id.id
+
+        self['dependencies'].remove(id)
 
 
 class PBXProject(PBXType):
-    pass
+    def remove_reference(self, id):
+        if 'projectReferences' not in self:
+            self['projectReferences'] = PBXList()
+            return
 
+        if not PBXType.IsGuid(id):
+            id = id.id
+
+        ref=None
+        for reference in self['projectReferences']:
+            if reference.get('ProjectRef') == id:
+                ref=reference
+                break
+        self['projectReferences'].remove(ref)
 
 class PBXContainerItemProxy(PBXType):
     pass
@@ -1074,6 +1094,35 @@ class XcodeProject(PBXDict):
         if len(groups):
             for group in groups:
                 self.remove_group(group.id, recursive)
+
+    def remove_project_by_path(self, f_path):
+        id = self.get_file_id_by_path(f_path)
+        if id == 0:
+            return
+
+
+
+        itemProxies = [f for f in self.objects.values() if f.get('isa') == 'PBXContainerItemProxy' and f.get('containerPortal') == id]
+        for item in itemProxies:
+            refProxies = [f for f in self.objects.values() if f.get('isa') == 'PBXReferenceProxy' and f.get('remoteRef') == item.id]
+            for refProxy in refProxies:
+                self.remove_file(refProxy.id, recursive=True)
+
+            targetProies = [f for f in self.objects.values() if f.get('isa') == 'PBXTargetDependency' and f.get('targetProxy') == item.id]
+            for targetProxy in targetProies:
+                nativeTargetes = [f for f in self.objects.values() if f.get('isa') == 'PBXNativeTarget']
+                for nativeTarget in nativeTargetes:
+                    nativeTarget.remove_dependency(targetProxy.id)
+                self.remove_file(targetProxy.id, recursive=True)
+
+            self.remove_file(item.id, recursive=True)
+
+        projectes = [f for f in self.objects.values() if f.get('isa') == 'PBXProject']
+        for project in projectes:
+            project.remove_reference(id)
+
+        self.remove_file(id, recursive=True)
+        return
 
     def move_file(self, id, dest_grp=None):
         pass
